@@ -1,11 +1,11 @@
-# 🌐 is-dev.me — Free Subdomain Service
+### 🌐 is-dev.me — Free Subdomain Service
 
 Welcome to **is-dev.me**, a free subdomain service for developers, students, hobby projects, bots, APIs, portfolios, and general web hosting needs.  
 All DNS records are managed automatically using **deSEC DNS API** and GitHub Actions.
 
 ---
 
-## 🚀 Features
+### 🚀 Features
 - ✔ Free subdomain
 - ✔ Automated DNS via GitHub Actions
 - ✔ Supports A, AAAA, CNAME, MX, TXT, NS, and more
@@ -14,7 +14,7 @@ All DNS records are managed automatically using **deSEC DNS API** and GitHub Act
 
 ---
 
-## 📥 How to Register a Subdomain
+### 📥 How to Register a Subdomain
 
 ### 1. Fork this repository
 
@@ -52,7 +52,7 @@ Your DNS will be applied automatically.
 
 ---
 
-## 📘 Example DNS Records
+### 📘 Example DNS Records
 
 ### GitHub Pages (CNAME)
 
@@ -80,7 +80,7 @@ Your DNS will be applied automatically.
 
 ---
 
-## ⚙️ How Automation Works
+### ⚙️ How Automation Works
 
 GitHub Actions will:
 
@@ -91,7 +91,7 @@ GitHub Actions will:
 
 ---
 
-## 📄 Rules
+### 📄 Rules
 
 * No illegal content, malware, phishing, or harmful activities
 * Subdomains may be revoked for violations
@@ -99,14 +99,14 @@ GitHub Actions will:
 
 ---
 
-## 💬 Support
+### 💬 Support
 
 This project does not provide dedicated support.
 You may open an **Issue** if needed.
 
 ---
 
-## ❤️ Credits
+### ❤️ Credits
 
 Thanks for using **is-dev.me**.
 Maintained with automation and care.
