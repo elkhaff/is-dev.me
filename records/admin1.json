@@ -1,0 +1,10 @@
+{
+  "owner": {
+    "username": "Tio",
+    "email": "tioclkp02@gmail.com",
+    "repo": "https://github.com/hostinger-bot/subdomainfree"
+  },
+  "records": {
+    "CNAME": "hostinger-bot.github.io"
+  }
+}
