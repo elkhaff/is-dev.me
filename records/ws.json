@@ -5,7 +5,14 @@
     "repo": "https://github.com"
   },
   "subdomain": "ws",
-  "records": {
-    "NS": [ "ns1.onii.pp.ua", "ns2.onii.pp.ua" ]
-  }
+  "records": [
+    {
+      "type": "NS",
+      "value": "ns1.onii.pp.ua"
+    },
+    {
+      "type": "NS",
+      "value": "ns2.onii.pp.ua"
+    }
+  ]
 }
