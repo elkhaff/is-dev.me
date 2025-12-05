@@ -78,6 +78,30 @@ Your DNS will be applied automatically.
 }
 ```
 
+### NS
+
+```json
+  "record": [
+    "ns1.domain.com",
+    "ns2.domain.com"
+  ]
+```
+
+### Example NS
+```json
+{
+  "owner": {
+    "username": "jhon",
+    "email": "jhondue@gmail.com",
+    "repo": "https://github.com/jsondue"
+  },
+  "subdomain": "jhon",
+  "record": [
+    "ns1.domain.com",
+    "ns2.domain.com"
+  ]
+}
+```
 ---
 
 ### ⚙️ How Automation Works
