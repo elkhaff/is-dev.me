@@ -2,121 +2,87 @@ const fs = require("fs");
 const path = require("path");
 const fetch = require("node-fetch");
 
-// ================== CONFIG ==================
 const TOKEN = process.env.DESEC_TOKEN;
 const DOMAIN = "is-dev.me";
-const BASE = `https://desec.io/api/v1/domains/${DOMAIN}/rrsets`;
+const BASE = `https://desec.io/api/v1/domains/${DOMAIN}/rrsets/`;
+const DOMAIN_INFO = `https://desec.io/api/v1/domains/${DOMAIN}/`;
 
-// Supported record types by deSEC
-const SUPPORTED = [
-  "A","AAAA","AFSDB","CAA","CNAME","DNAME","DS","HINFO",
-  "HTTPS","LOC","MX","NAPTR","NS","PTR","RP","SPF","SRV",
-  "SSHFP","SVCB","TLSA","TXT"
-];
+const SUPPORTED_TYPES = ["A","AAAA","CAA","CNAME","MX","NS","TXT","SRV","PTR","NAPTR","SPF","TLSA","DS","SSHFP"];
 
-async function apply() {
-  console.log("=== DNS Apply Process Started ===");
+async function enableDNSSEC() {
+  const r = await fetch(DOMAIN_INFO, {
+    method: "PATCH",
+    headers: { Authorization: `Token ${TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ dnssec: true })
+  });
+  if (!r.ok && r.status !== 400) console.warn("DNSSEC warning:", await r.text());
+}
+
+async function putOrPost(url, payloads) {
+  let r = await fetch(url, {
+    method: "PUT",
+    headers: { Authorization: `Token ${TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payloads[0])
+  });
+  if (!r.ok && r.status !== 404) {
+    r = await fetch(BASE, {
+      method: "POST",
+      headers: { Authorization: `Token ${TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payloads)
+    });
+  }
+  if (!r.ok) {
+    const err = await r.text();
+    throw new Error(`API error ${r.status}: ${err}`);
+  }
+  return r;
+}
+
+async function applyRecords() {
+  console.log("=== DNS Apply + DNSSEC Started ===\n");
+  await enableDNSSEC();
 
   const files = fs.readdirSync("./records").filter(f => f.endsWith(".json"));
-  if (files.length === 0) {
-    console.log("No JSON files found inside /records");
-    return;
-  }
+  if (!files.length) return console.log("No JSON files in /records");
 
   for (const file of files) {
     console.log(`\nProcessing: ${file}`);
+    const data = JSON.parse(fs.readFileSync(path.join("./records", file), "utf8"));
 
-    const data = JSON.parse(
-      fs.readFileSync(path.join("./records", file), "utf8")
-    );
+    const subname = (data.subdomain || "").trim().toLowerCase();
+    if (!subname) throw new Error(`"subdomain" missing in ${file}`);
 
-    // =============================
-    //   Validate schema
-    // =============================
-    if (!data.subdomain || typeof data.subdomain !== "string") {
-      throw new Error(`Missing "subdomain" field in: ${file}`);
+    if (Array.isArray(data.record)) {
+      const records = data.record.map(v => v.trim()).filter(Boolean).map(v => v.endsWith(".") ? v : v + ".");
+      console.log(`Applying NS → ${subname}.${DOMAIN} → ${records.join(", ")}`);
+      await putOrPost(`${BASE}${subname}/NS/`, [{ subname, type: "NS", ttl: 3600, records }]);
+      console.log(`NS applied (${records.length})`);
+      continue;
     }
 
-    const subname = data.subdomain.trim().toLowerCase();
-    const recordsObj = data.records;
+    if (data.records && typeof data.records === "object") {
+      for (const [typeRaw, value] of Object.entries(data.records)) {
+        const type = typeRaw.toUpperCase();
+        if (!SUPPORTED_TYPES.includes(type)) throw new Error(`Unsupported type ${type} in ${file}`);
 
-    if (!recordsObj || typeof recordsObj !== "object") {
-      throw new Error(`Invalid "records" object in file: ${file}`);
+        let records = Array.isArray(value) ? value : [value];
+        records = records.map(v => v.trim()).filter(Boolean);
+        records = records.map(r => ["CNAME","NS","PTR","MX","DNAME"].includes(type) && !r.endsWith(".") ? r + "." : r);
+
+        console.log(`Applying ${type} → ${subname}.${DOMAIN} → ${records.join(" | ")}`);
+        await putOrPost(`${BASE}${subname}/${type}/`, [{ subname, type, ttl: 3600, records }]);
+        console.log(`${type} applied`);
+      }
+      continue;
     }
 
-    // =============================
-    //   Process each record type
-    // =============================
-    for (const type in recordsObj) {
-      const recordType = type.toUpperCase();
-      let rawValue = recordsObj[type];
-
-      if (!SUPPORTED.includes(recordType)) {
-        throw new Error(`Record type "${recordType}" is not supported by deSEC.`);
-      }
-
-      if (typeof rawValue !== "string") {
-        throw new Error(`Record value for ${recordType} must be a string.`);
-      }
-
-      let value = rawValue.trim();
-
-      // Auto add trailing dot for domain targets
-      if (["CNAME", "NS", "PTR", "DNAME"].includes(recordType) && !value.endsWith(".")) {
-        value += ".";
-      }
-
-      const payload = {
-        subname,
-        type: recordType,
-        records: [value],
-        ttl: 3600
-      };
-
-      const url = `${BASE}/${subname}/${recordType}/`;
-
-      console.log(`Applying ${recordType} record: ${subname}.${DOMAIN} → ${value}`);
-
-      // Try PUT
-      let r = await fetch(url, {
-        method: "PUT",
-        headers: {
-          Authorization: `Token ${TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
-
-      // If PUT fails → fallback to POST
-      if (!r.ok) {
-        console.log(`PUT failed (${r.status}). Trying POST...`);
-
-        r = await fetch(BASE + "/", {
-          method: "POST",
-          headers: {
-            Authorization: `Token ${TOKEN}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify([payload])
-        });
-      }
-
-      // Final error check
-      if (!r.ok) {
-        const errMsg = await r.text();
-        throw new Error(
-          `Failed to apply record (${recordType}) for ${subname}.${DOMAIN}\nResponse:\n${errMsg}`
-        );
-      }
-
-      console.log(`✔ Successfully applied ${recordType} record`);
-    }
+    throw new Error(`File ${file} must contain "record" (array) or "records" (object)`);
   }
 
-  console.log("\n=== DNS Apply Process Completed ===");
+  console.log("\nAll records applied + DNSSEC active!");
 }
 
-apply().catch(err => {
+applyRecords().catch(err => {
   console.error("\nERROR:", err.message);
   process.exit(1);
 });
