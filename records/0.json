@@ -6,6 +6,6 @@
   },
   "subdomain": "0",
   "records": {
-    "CNAME": "https://f-s.pages.dev"
+    "CNAME": "f-s.pages.dev"
   }
 }
